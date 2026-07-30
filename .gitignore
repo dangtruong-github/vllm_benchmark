@@ -1,4 +1,8 @@
 results/
+data/*
+!data/original-trace.jsonl
+!data/predictions-baseline.jsonl
+!data/processed-trace.jsonl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

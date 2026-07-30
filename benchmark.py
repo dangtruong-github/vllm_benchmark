@@ -188,6 +188,8 @@ def send_request(
             # --------------------------------------------------
             usage = obj.get("usage")
 
+            print(obj)
+
             if usage is not None:
                 if usage.get("prompt_tokens") is not None:
                     input_tokens = usage["prompt_tokens"]
