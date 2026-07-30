@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 
 import numpy as np
 from rouge_score import rouge_scorer
@@ -30,8 +31,11 @@ def cosine_similarity_matrix(a, b):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--baseline", required=True)
-    parser.add_argument("--submission", required=True)
+    parser.add_argument("--baseline", default="data/predictions-baseline.jsonl")
+    parser.add_argument(
+        "--submission", required=True, 
+        help="Folder contains result.jsonl for evaluation"
+    )
     parser.add_argument(
         "--embedding-model",
         default="sentence-transformers/all-MiniLM-L6-v2",
@@ -40,7 +44,7 @@ def main():
     args = parser.parse_args()
 
     baseline = load_predictions(args.baseline)
-    submission = load_predictions(args.submission)
+    submission = load_predictions(os.path.join(args.submission, "result.jsonl"))
 
     common = sorted(set(baseline) & set(submission))
 
@@ -105,48 +109,33 @@ def main():
 
     cosine = cosine_similarity_matrix(emb_a, emb_b)
 
-    print("\n================ RESULT ================\n")
+    EVALUATION_SUMMARY_FILE = os.path.join(args.submission, "evaluation_summary.txt")
 
-    print(f"Samples                  : {len(common)}")
-    print(f"Exact Match              : {np.mean(em_scores):.4f}")
+    summary_lines = [
+        "================ RESULT ================",
+        "",
+        f"Samples                  : {len(common)}",
+        f"Exact Match              : {np.mean(em_scores):.4f}",
+        "",
+        f"ROUGE-L F1               : {np.mean(rouge_f):.4f}",
+        f"ROUGE-L Precision        : {np.mean(rouge_p):.4f}",
+        f"ROUGE-L Recall           : {np.mean(rouge_r):.4f}",
+        "",
+        f"Embedding Cosine         : {np.mean(cosine):.4f}",
+        "",
+        f"Baseline Avg Length      : {np.mean(baseline_lengths):.2f} words",
+        f"Submission Avg Length    : {np.mean(submission_lengths):.2f} words",
+        f"Average Length Ratio     : {np.mean(length_ratios):.4f}",
+    ]
 
-    print()
-    print(f"ROUGE-L F1               : {np.mean(rouge_f):.4f}")
-    print(f"ROUGE-L Precision        : {np.mean(rouge_p):.4f}")
-    print(f"ROUGE-L Recall           : {np.mean(rouge_r):.4f}")
+    summary = "\n".join(summary_lines)
 
-    print()
-    print(f"Embedding Cosine         : {np.mean(cosine):.4f}")
+    # Print to console
+    print(f"\n{summary}")
 
-    print()
-    print(f"Baseline Avg Length      : {np.mean(baseline_lengths):.2f} words")
-    print(f"Submission Avg Length    : {np.mean(submission_lengths):.2f} words")
-    print(f"Average Length Ratio     : {np.mean(length_ratios):.4f}")
-
-    print("\n============= Worst Semantic Matches =============\n")
-
-    order = np.argsort(cosine)
-
-    for rank, i in enumerate(order[:10], start=1):
-        rid = common[i]
-
-        print("=" * 80)
-        print(f"Rank #{rank}")
-        print(f"Request ID : {rid}")
-        print(f"Cosine     : {cosine[i]:.4f}")
-        print(f"ROUGE-L F1 : {rouge_f[i]:.4f}")
-        print()
-        print("Baseline")
-        print("-" * 20)
-        print(baseline_texts[i])
-        print()
-        print("Submission")
-        print("-" * 20)
-        print(submission_texts[i])
-        print()
-
-    print("=" * 80)
-
+    # Save to file
+    with open(EVALUATION_SUMMARY_FILE, "w", encoding="utf-8") as f:
+        f.write(summary + "\n")
 
 if __name__ == "__main__":
     main()

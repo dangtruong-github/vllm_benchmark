@@ -7,16 +7,16 @@ client = OpenAI(
     api_key="EMPTY",
 )
 
-INPUT_FILE = "trace-round1.jsonl"
-OUTPUT_FILE = "predictions.jsonl"
+INPUT_FILE = "data/processed-trace.jsonl"
+OUTPUT_FILE = "data/predictions-baseline.jsonl"
 
 
-def generate(messages, model):
+def generate(messages, model, max_tokens):
     response = client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=0.0,
-        max_tokens=512,
+        max_tokens=max_tokens,
     )
 
     return response.choices[0].message.content
@@ -28,12 +28,12 @@ def main():
 
         for line in tqdm(fin):
             req = json.loads(line)
-
             body = req["body"]
 
             answer = generate(
                 messages=body["messages"],
-                model="Qwen/Qwen3.5-0.8B",
+                model="Qwen/Qwen3.5-2B",
+                max_tokens=body["max_tokens"],
             )
 
             output = {
